@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <!-- Add Font Awesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* Existing styles remain unchanged */
+        .chatbox {
+            position: fixed;
+            bottom: 10%;
+            inset-inline-start: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            max-width: 900px;
+            width: 90%;
+            height: 600px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.5s ease-in-out;
+            display: none; /* Initially hidden */
+            background: linear-gradient(135deg, #ffffff, #f0f4f8);
+            direction: ltr;
+        }
+
+        .chatbox__support {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-width: 100%;
+        }
+
+        .chatbox__icon {
+            position: fixed;
+            bottom: 30px;
+            inset-inline-end: 20px;
+            background: linear-gradient(45deg, #313131, #4f4f4f);
+            color: white;
+            padding: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease-in-out;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .chatbox__icon:hover {
+            background: linear-gradient(45deg, #d81b60, #ec407a);
+            transform: scale(1.1);
+        }
+
+        .chatbox__header {
+            background: linear-gradient(90deg, #313131, #4f4f4f);
+            color: white;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 16px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .chatbox__close {
+            font-size: 18px;
+            cursor: pointer;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .chatbox__close:hover {
+            transform: rotate(90deg);
+        }
+
+        .chatbox__messages {
+            flex-grow: 1;
+            padding: 10px;
+            flex-direction: column;
+            display: flex;
+            overflow-y: auto;
+            max-height: 100%;
+            scrollbar-width: thin;
+            scrollbar-color: #827285 #f0f2f5;
+            gap: 25px;
+        }
+
+        .chatbox__messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chatbox__messages::-webkit-scrollbar-thumb {
+            background-color: #827285;
+            border-radius: 10px;
+        }
+
+        .chatbox__messages::-webkit-scrollbar-track {
+            background-color: #f0f2f5;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #ff2e2e, #3a12ff);
+            color: white;
+            text-align: start;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            padding: 8px 12px;
+            border-radius: 12px;
+            align-self: flex-end;
+            max-width: 80%;
+            overflow-wrap: break-word;
+            position: relative;
+            margin: 5px 0;
+        }
+
+        .gemini-message {
+            background: linear-gradient(135deg, #b1b1b1, #ffffff);
+            color: rgb(21, 21, 21);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            text-align: start;
+            padding: 8px 12px;
+            border-radius: 12px;
+            align-self: flex-start;
+            max-width: 80%;
+            overflow-wrap: break-word;
+            position: relative;
+            margin: 5px 0;
+        }
+
+        .user-message:first-child {
+            border-start-end-radius: 18px;
+            border-end-end-radius: 18px;
+        }
+
+        .user-message:last-child {
+            border-start-start-radius: 18px;
+        }
+
+        .gemini-message:first-child {
+            border-start-start-radius: 18px;
+        }
+
+        .gemini-message:last-child {
+            border-end-end-radius: 18px;
+        }
+
+        .chatbox__footer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: linear-gradient(to right, #f1f1f1, #e0e0e0);
+            flex-shrink: 0;
+        }
+
+        .chatbox__footer input {
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+            background: #fff;
+        }
+
+        .chatbox__footer input:focus {
+            border-color: #9c27b0;
+        }
+
+        .chatbox__send--footer {
+            background: linear-gradient(45deg, #5b5858, #524f4f);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            font-size: 18px;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .chatbox__send--footer:hover {
+            background: linear-gradient(45deg, #818181, #808080);
+            transform: scale(1.1);
+        }
+
+        @keyframes buttonClick {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+
+        .button-click {
+            animation: buttonClick 0.2s ease-in-out;
+        }
+
+        @media (direction: rtl) {
+            .user-message {
+                align-self: flex-start;
+            }
+            .gemini-message {
+                align-self: flex-end;
+            }
+            .chatbox__close:hover {
+                transform: rotate(-90deg);
+            }
+        }
+
+        @media screen and (max-width: 1024px) {
+            .chatbox {
+                width: 100%;
+                height: 100%;
+                bottom: 10px;
+                inset-inline-start: 50%;
+                border-radius: 5px;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            .chatbox {
+                width: 100%;
+                height: 100%;
+                bottom: 0;
+                inset-inline-start: 50%;
+                border-radius: 0;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .chatbox {
+                width: 100%;
+                height: 100%;
+                bottom: 0;
+                inset-inline-start: 50%;
+                border-radius: 0;
+            }
+            .chatbox__icon {
+                bottom: 15px;
+                inset-inline-start: 50%;
+                transform: translateX(-50%);
+                font-size: 20px;
+                padding: 12px;
+            }
+        }
+
+        .chatbox--custom-theme .chatbox__messages {
+            background: linear-gradient(135deg, #faaf00, #ff2e2e, #3a12ff);
+            background-attachment: fixed;
+        }
+
+        .chatbox--custom-theme .user-message,
+        .chatbox--custom-theme .gemini-message {
+            background: transparent;
+            border-radius: 0;
+            position: relative;
+        }
+
+        .chatbox--custom-theme .user-message::after,
+        .chatbox--custom-theme .gemini-message::after {
+            content: "";
+            position: absolute;
+            inset: -36px;
+            border: 36px solid #fff;
+            border-radius: 54px;
+            z-index: -1;
+        }
+
+        .chatbox--custom-theme .chatbox__footer,
+        .chatbox--custom-theme .chatbox__header {
+            background: #fff;
+        }
+
+        .chatbox.active {
+            animation: slideIn 0.3s ease-in-out;
+        }
+
+        .chatbox__icon::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+            z-index: -1;
+        }
+
+        /* Animation definitions */
+        @keyframes slideIn {
+            from { transform: translateX(-50%) translateY(100%); }
+            to { transform: translateX(-50%) translateY(0); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+
+        /* New style for mic button state */
+        .mic-active {
+            background: linear-gradient(45deg, #ff5722, #f44336);
+        }
+    </style>
+</head>
+<body>
+    <div class="chatbox__icon" id="chatIcon">💬</div>
+    <div class="chatbox" id="chatbox">
+        <div class="chatbox__support">
+            <div class="chatbox__header">
+                <div class="chatbot-title">Chatbot</div>
+                <div class="chatbox__close" id="closeChat">✖</div>
+            </div>
+            <div class="chatbox__messages" id="chatboxMessages"></div>
+            <div class="chatbox__footer">
+                <input type="text" id="user_input" placeholder="Ask me anything...">
+                <button class="chatbox__send--footer" id="micButton"><i class="fa-solid fa-microphone-lines"></i></button>
+                <button class="chatbox__send--footer" onclick="sendMessage()" id="sendButton">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatbox = document.getElementById("chatbox");
+        const chatIcon = document.getElementById("chatIcon");
+        const closeChat = document.getElementById("closeChat");
+        const micButton = document.getElementById("micButton");
+        const userInput = document.getElementById("user_input");
+        const chatboxMessages = document.getElementById("chatboxMessages");
+
+        // Toggle chatbox visibility
+        chatIcon.addEventListener("click", () => {
+            chatbox.style.display = "flex";
+            chatbox.classList.add("active");
+            chatIcon.style.display = "none";
+        });
+
+        closeChat.addEventListener("click", () => {
+            chatbox.style.display = "none";
+            chatbox.classList.remove("active");
+            chatIcon.style.display = "block";
+        });
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+
+            if (!message) return;
+
+            // Add user message
+            const userMsg = document.createElement("div");
+            userMsg.className = "user-message";
+            userMsg.innerHTML = `<strong></strong> ${message}`;
+            chatboxMessages.appendChild(userMsg);
+
+            // Clear input
+            userInput.value = "";
+
+            try {
+                // Send request to Flask backend
+                const response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ message: message }),
+                });
+
+                const data = await response.json();
+
+                // Add bot response
+                const botMsg = document.createElement("div");
+                botMsg.className = "gemini-message";
+                botMsg.innerHTML = `<strong></strong> ${data.response}`;
+                chatboxMessages.appendChild(botMsg);
+
+                // Scroll to bottom
+                chatboxMessages.scrollTop = chatboxMessages.scrollHeight;
+            } catch (error) {
+                console.error("Error:", error);
+                const errorMsg = document.createElement("div");
+                errorMsg.className = "gemini-message";
+                errorMsg.innerHTML = `<strong>Bot:</strong> Sorry, something went wrong.`;
+                chatboxMessages.appendChild(errorMsg);
+            }
+        }
+
+        // Handle Enter key press
+        userInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                sendMessage();
+            }
+        });
+
+        // Speech Recognition
+        let recognition;
+        let isMicActive = false;
+
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                userInput.value = transcript;
+                // Automatically send message after speech recognition
+                sendMessage();
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                micButton.classList.remove("mic-active");
+                isMicActive = false;
+            };
+
+            recognition.onend = () => {
+                micButton.classList.remove("mic-active");
+                isMicActive = false;
+            };
+        } else {
+            alert("Speech recognition is not supported in this browser. Please use Chrome.");
+        }
+
+        // Toggle mic button
+        micButton.addEventListener("click", () => {
+            if (!isMicActive) {
+                if (recognition) {
+                    micButton.classList.add("mic-active");
+                    isMicActive = true;
+                    recognition.start();
+                }
+            } else {
+                recognition.stop();
+                micButton.classList.remove("mic-active");
+                isMicActive = false;
+            }
+        });
+    </script>
+</body>
+</html>
